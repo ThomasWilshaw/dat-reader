@@ -1,0 +1,148 @@
+4. LUT Appendix
+======================
+4.1 - 1D LUT file format:
+	4.1.1 Format
+	LUT_1D_SIZE 1024
+	LUT_1D_BITS 16
+	LUT_1D_NAME lut_information
+	r0 g0 b0
+	r1 g1 b1
+	...
+	...
+	...
+	r1023 g1023 b1023
+
+	NOTE:
+	LUT_1D_SIZE: should be 1024 when inbit is 10 in LUT attribute info and should be 4096 when inbit is 12
+
+	4.1.2 File name suffix : .lut
+	
+	4.1.3 DIT 1DLUT name
+		dit[ID].lut
+		ID:
+		01
+		02
+		...
+		15
+		16
+
+	4.1.4 Calibration 1DLUT name:
+	user[ID].lut
+	ID: 1, 2 or 3
+	
+4.2 - 3D LUT file format:
+	4.2.1 cube file format:
+	Same as Adobe's cube lut specification, without TITLE, DOMAIN_MIN, DOMAIN_MAX keywords.
+	only use LUT_3D_SIZE keyword to specify lut size, LUT_3D_SIZE must be 17, 33 or 65
+
+	4.2.2 dat file format:
+	<FileHeader> + <FileData>
+	
+	4.2.2.1 file header(128Bytes)
+	struct FileHeader {
+		unsigned long magic; // 4Bytes, must be 0x42340299(little endian)
+		unsigned long ver; // 4Bytes, 0x02000001(little endian)
+		char model[16]; // 16Bytes, monitor model, e.g. "LM-2461W", "CM170". NOTE: model string must match target monitor's model
+		char version[16]; // 16Bytes, data version, "x.y.zz". eg. "1.0.11"
+		unsigned long data_checksum; // 4Bytes, FileData sum(little endian)
+		unsigned long length; // 4Bytes, data length = 1048576 (little endian)
+		char description[16]; // 16Bytes, 3dlut description info, eg. "CalSoftware"
+		unsigned long reserved2; // 4Bytes, reserved
+		char name[16]; // 16Bytes, information of lut
+		char reserved[42]; // 43 Bytes, reserved
+		uint8_t size; // 17 for 17x17x17
+		unsigned char header_checksum; // file header sum
+	};
+
+	4.2.2.2 file data
+	data size:
+	<node number> x <bytes per node>
+
+	node number:
+	17x17x17 when size is 17 in 3DLUT attribute info
+	33x33x33 when size is 33 in 3DLUT attribute info bytes per node:
+	4 bytes when outbit is 10 in 3DLUT attribute info data structure:
+	32Bit = red_value | (green_value << 10) | (blue_value << 20)
+	8 bytes when outbit is 12 in 3DLUT attribute info
+	64Bit = red_value | (green_value << 16) | (blue_value << 32)
+
+	data endian: big endian
+	green index blue index
+	value range:
+	  red_value - [0, 1023] when outbit is 10, [0 - 4095] when outbit is 12
+	  green_value - [0, 1023] when outbit is 10, [0 - 4095] when outbit is 12
+	  blue_value - [0, 1023] when outbit is 10, [0 - 4095] when outbit is 12
+	
+	data layout:
+	red index green index blue index
+	0 		  0			  0
+	1 		  0			  0
+	2		  0			  0
+	.		  .			  .
+	.		  .			  .
+	. 		  .			  .
+	16		  0			  0
+	0		  1			  0
+	1 		  1			  0
+	1 		  2			  1
+	.		  .			  .
+	.		  .			  .
+	. 		  .			  .
+	16 		  16		  16
+
+	4.2.2.3 FileData sum calculation
+	unsigned int data_sum = 0;
+	unsigned char buf[19652];
+	read(fd, buf, 19652);
+	for (int i = 0; i < 19652; i++)
+	data_sum += (unsigned int)buf[i];
+
+	4.2.2.4 file header sum calculation
+	unsigned char header_sum = 0;
+	unsigned char buf[128]; memcpy(buf, fileheader, 128); for (int i = 0; i < 128; i++)
+	header_sum += buf[i];
+
+	4.2.3 3DLUT File naming rule
+	Calibration 3DLUT name:
+	[color space].{dat,cfe}
+	  color space:
+		rec709
+		smptec
+		ebu
+		dcip3
+		user1
+		user2
+		user3
+
+	DIT 3DLUT name:
+	dit[ID].{dat,cfe}
+	  ID:
+		01
+		02
+		...
+		15
+		16
+
+	4.3 - CSC data structure
+	
+	4.3.1 CSC data size: 18 x 4 Bytes
+	
+	4.3.2 CSC data layout
+		Gain[0][0]
+		Gain[0][1]
+		Gain[0][2]
+		Gain[1][0]
+		Gain[1][1]
+		Gain[1][2]
+		Gain[2][0]
+		Gain[2][1]
+		Gain[2][2]
+		Offset[0]
+		Offset[1]
+		Offset[2]
+		Min[0]
+		Min[1]
+		Min[2]
+		Max[0]
+		Max[1]
+		Max[2]
