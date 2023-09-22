@@ -24,7 +24,8 @@ typedef struct RGB {
     uint16_t b;
 } RGB;
 
-RGB get_10_bit_RGB(unsigned char value[4])
+// Returns the RGB triplet from a 32bit chunk
+RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
 {
     RGB rgb;
     rgb.r = (value[0] << 2) + (value[1] >> 6);
@@ -44,6 +45,11 @@ RGB get_10_bit_RGB(unsigned char value[4])
     }
 
     return rgb;
+}
+
+int get_cube_size(unsigned long length)
+{
+
 }
 
 
@@ -104,15 +110,20 @@ int main()
         printf("ERROR: Data checksum does not match\n");
     }
 
-    fseek(fp, 128, SEEK_SET);
-
-    unsigned char value[4];
+    unsigned char* value = data_buf;
     RGB test_rgb;
     
     for(int i = 0; i < 17*17*17; i++)
     {
-        fread(&value, sizeof(value), 1, fp);
-        test_rgb = get_10_bit_RGB(value);
+        test_rgb = get_10_bit_RGB_from_32_bit_chunk(value + (i*4));
+    }
+
+    long end_of_data = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+
+    if(end_of_data == ftell(fp))
+    {
+        printf("Reached EOF\n");
     }
 
     return 0;
