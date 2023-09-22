@@ -2,6 +2,7 @@
 #include <conio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 typedef struct FileHeader {
 	unsigned long magic;            // 4Bytes, must be 0x42340299(little endian)
@@ -47,25 +48,56 @@ RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
     return rgb;
 }
 
+// Returns the cube size based on the data length
 int get_cube_size(unsigned long length)
 {
+    if (length == 17*17*17*4)
+    {
+        return 17;
+    }
+    if (length == 17*17*17*8)
+    {
+        return 17;
+    }
+    if (length == 33*33*33*4)
+    {
+        return 33;
+    }
+    if (length == 33*33*33*8)
+    {
+        return 33;
+    }
+
+    return 0;
+}
+
+// Return the bytes per chunk based on the data length
+int get_bytes_per_chunk(unsigned long length)
+{
+    if (length == 17*17*17*4)
+    {
+        return 4;
+    }
+    if (length == 17*17*17*8)
+    {
+        return 8;
+    }
+    if (length == 33*33*33*4)
+    {
+        return 4;
+    }
+    if (length == 33*33*33*8)
+    {
+        return 8;
+    }
+
+    return 0;
 
 }
 
-
-int main()
+void print_header(FileHeader file_header)
 {
-    FILE *fp;
-    fp = fopen("dit01.dat", "rb");
-    if(fp == NULL)
-    {
-        printf("Failed to read file\n");
-        exit(0);
-    }
-
-    FileHeader file_header;
-    fread(&file_header, sizeof(file_header), 1, fp);
-
+    printf("---HEADER---\n");
     printf("magic: %#010x\n", file_header.magic);
     printf("ver: %#010x\n", file_header.ver);
     printf("model: %s\n", file_header.model);
@@ -78,7 +110,25 @@ int main()
     printf("reserved: %s\n", file_header.reserved);
     printf("size: %hhu\n", file_header.size);
     printf("header_checksum: %u\n", file_header.header_checksum);
+}
 
+
+int main()
+{
+    FILE *fp;
+    fp = fopen("fsi_sample_luts\\dit01.dat", "rb");
+    if(fp == NULL)
+    {
+        printf("Failed to read file\n");
+        exit(0);
+    }
+
+    // read header into FileHEader struct and print
+    FileHeader file_header;
+    fread(&file_header, sizeof(file_header), 1, fp);
+    print_header(file_header);
+
+    // calculate header checksum and compare
     rewind(fp);
     unsigned char header_sum = 0;
 	unsigned char buf[128];
@@ -90,34 +140,51 @@ int main()
     
     if (header_sum == file_header.header_checksum)
     {
-        printf("Header checksum matches\n");
+        printf("Header checksum matches (%d)\n", header_sum);
     } else
     {
         printf("ERROR: Header checksum does not match\n");
     }
 
+    // figure out lut size
+    int cube_size = get_cube_size(file_header.length);
+    int bytes_per_chunk = get_bytes_per_chunk(file_header.length);
+    printf("\n");
+    printf("Cube size: %d\n", cube_size);
+    printf("Bytes per chunk: %d\n", bytes_per_chunk);
+
+    printf("\n---DATA---\n");
+
+    uint16_t lut_size = cube_size*cube_size*cube_size; // number of rgb data points in the lut
+    uint16_t data_size = lut_size*bytes_per_chunk; // size of entire data source
+
+    // read the data into an array
+    unsigned char* data_buf = malloc(data_size * sizeof(unsigned char));
+    fread(data_buf, sizeof(unsigned char), data_size, fp);
+
+    // calculate data checks um and compare
     unsigned int data_sum = 0;
-	unsigned char data_buf[19652];
-	fread(&data_buf, sizeof(data_buf), 1, fp);
-	for (int i = 0; i < 19652; i++)
+	for (int i = 0; i < data_size; i++)
     {
 	    data_sum += (unsigned int)data_buf[i];
     }
 
-    if (data_sum == file_header.data_checksum){
-        printf("Data checksum matches\n");
+    if (data_sum == file_header.data_checksum)
+    {
+        printf("Data checksum matches (%d)\n", data_sum);
     } else {
         printf("ERROR: Data checksum does not match\n");
     }
 
+    // do something with the data
     unsigned char* value = data_buf;
     RGB test_rgb;
-    
-    for(int i = 0; i < 17*17*17; i++)
+    for(int i = 0; i < lut_size; i++)
     {
         test_rgb = get_10_bit_RGB_from_32_bit_chunk(value + (i*4));
     }
 
+    // check we're at the end of the file
     long end_of_data = ftell(fp);
     fseek(fp, 0, SEEK_END);
 
