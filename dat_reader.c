@@ -178,6 +178,11 @@ int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size, ch
 {
     FILE* cube;
     cube = fopen(output_name, "w");
+    if(cube == NULL)
+    {
+        printf("Failed to read file (%s)\n", output_name);
+        exit(0);
+    }
     fprintf(cube, "TITLE %s\n", header.name);
     fprintf(cube, "LUT_3D_SIZE %d\n", lut_size);
 
@@ -271,18 +276,45 @@ int dat_to_cube(FILE* fp, char* output)
     return 1;
 }
 
+void print_usage()
+{
+    printf("Usage:\n");
+    printf("\t-dtc input.dat output.cube\n");
+    printf("\t\tConverts input.dat to output.cube\n\n");
+
+    printf("\t-ctd input.cube input.dat\n");
+    printf("\t\tConverts input.cube to input.dat (NOT IMPLEMENTED YET)\n");
+}
+
 
 int main(int argc, char *argv[])
 {
-    FILE *fp;
-    fp = fopen("fsi_sample_luts\\dit04.dat", "rb");
-    if(fp == NULL)
+    if(argc < 2)
     {
-        printf("Failed to read file\n");
-        exit(0);
+        print_usage();
+        return 0;
     }
 
-    dat_to_cube(fp, "test_write.cube");
+    if (strcmp(argv[1], "-dtc") == 0 && argc == 3 || argc == 4){
+        FILE *fp;
+        // "fsi_sample_luts\\dit04.dat"
+        fp = fopen(argv[2], "rb");
+        if(fp == NULL)
+        {
+            printf("Failed to read file, %s\n", argv[2]);
+            exit(0);
+        }
+        if (argc == 4)
+        {
+            dat_to_cube(fp, argv[3]);
+        } else
+        {
+            dat_to_cube(fp, "output.cube");
+        }
+    } else
+    {
+        print_usage();
+    }
     
     return 0;
 }
