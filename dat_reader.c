@@ -174,10 +174,10 @@ unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
     return data_sum;
 }
 
-int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size)
+int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size, char* output_name)
 {
     FILE* cube;
-    cube = fopen("test_write.cube", "w");
+    cube = fopen(output_name, "w");
     fprintf(cube, "TITLE %s\n", header.name);
     fprintf(cube, "LUT_3D_SIZE %d\n", lut_size);
 
@@ -192,17 +192,8 @@ int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size)
     return 1;
 }
 
-
-int main()
+int dat_to_cube(FILE* fp, char* output)
 {
-    FILE *fp;
-    fp = fopen("fsi_sample_luts\\dit04.dat", "rb");
-    if(fp == NULL)
-    {
-        printf("Failed to read file\n");
-        exit(0);
-    }
-
     // read header into FileHEader struct and print
     FileHeader file_header;
     fread(&file_header, sizeof(file_header), 1, fp);
@@ -273,9 +264,26 @@ int main()
     }
     free(data_buf);
 
-    save_cube_file(file_header, rgb_data, 10, cube_size);
+    save_cube_file(file_header, rgb_data, 10, cube_size, output);
 
     free(rgb_data);
+
+    return 1;
+}
+
+
+int main(int argc, char *argv[])
+{
+    FILE *fp;
+    fp = fopen("fsi_sample_luts\\dit04.dat", "rb");
+    if(fp == NULL)
+    {
+        printf("Failed to read file\n");
+        exit(0);
+    }
+
+    dat_to_cube(fp, "test_write.cube");
+    
     return 0;
 }
 
