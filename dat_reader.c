@@ -248,7 +248,22 @@ int main()
         printf("ERROR: Data checksum does not match (%d)\n", data_sum);
     }
 
-    // do something with the data
+    // check we're at the end of the file
+    long end_of_data = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+
+
+    if(end_of_data == ftell(fp))
+    {
+        printf("Reached EOF, file is expected length\n");
+        fclose(fp);
+    } else{
+        printf("ERROR: Not reached EOF, file is malformed\n");
+        fclose(fp);
+        exit(1);
+    }
+
+    // copy data to buffer and convert to RGB struct
     RGB* rgb_data = malloc(lut_size * sizeof(RGB));
     unsigned char* value = data_buf;
     RGB test_rgb;
@@ -256,18 +271,11 @@ int main()
     {
        rgb_data[i] = get_10_bit_RGB_from_32_bit_chunk(value + (i*4));
     }
+    free(data_buf);
 
     save_cube_file(file_header, rgb_data, 10, cube_size);
 
-    // check we're at the end of the file
-    long end_of_data = ftell(fp);
-    fseek(fp, 0, SEEK_END);
-
-    if(end_of_data == ftell(fp))
-    {
-        printf("Reached EOF\n");
-    }
-
+    free(rgb_data);
     return 0;
 }
 
