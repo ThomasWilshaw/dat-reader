@@ -32,6 +32,10 @@ typedef struct FloatRGB {
 } FloatRGB;
 
 // Returns the RGB triplet from a 32bit chunk
+/*
+    32bit RGB data is stored as follows:
+    --BBBBBB BBBBGGGG GGGGGGRR RRRRRRRR
+*/
 RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
 {
     RGB rgb;
