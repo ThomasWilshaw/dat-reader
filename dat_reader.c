@@ -25,6 +25,12 @@ typedef struct RGB {
     uint16_t b;
 } RGB;
 
+typedef struct FloatRGB {
+    float r;
+    float g;
+    float b;
+} FloatRGB;
+
 // Returns the RGB triplet from a 32bit chunk
 RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
 {
@@ -46,6 +52,31 @@ RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
     }
 
     return rgb;
+}
+
+FloatRGB convert_RGB_to_FloatRGB(RGB rgb, int bit_depth)
+{
+    FloatRGB output;
+    
+    if (bit_depth == 10)
+    {
+        output.r = rgb.r / 1023.0;
+        output.g = rgb.g / 1023.0;
+        output.b = rgb.b / 1023.0;
+
+        return output;
+    }
+
+    if (bit_depth == 12){
+        output.r = rgb.r / 4095.0;
+        output.g = rgb.g / 4095.0;
+        output.b = rgb.b / 4095.0;
+
+        return output;
+    }
+    
+    printf("ERROR: Invalid bit dpeth used\n");
+    exit(1);
 }
 
 // Returns the cube size based on the data length
@@ -136,11 +167,29 @@ unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
     return data_sum;
 }
 
+int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size)
+{
+    FILE* cube;
+    cube = fopen("test_write.cube", "w");
+    fprintf(cube, "TITLE %s\n", header.name);
+    fprintf(cube, "LUT_3D_SIZE %d\n", lut_size);
+
+    for(int i = 0; i < lut_size*lut_size*lut_size; i++)
+    {
+        FloatRGB float_rgb = convert_RGB_to_FloatRGB(data[i], bit_depth);
+        fprintf(cube, "%.6f %.6f %.6f\n", float_rgb.r, float_rgb.g, float_rgb.b);
+    }
+
+    fclose(cube);
+
+    return 1;
+}
+
 
 int main()
 {
     FILE *fp;
-    fp = fopen("fsi_sample_luts\\dit01.dat", "rb");
+    fp = fopen("fsi_sample_luts\\dit16.dat", "rb");
     if(fp == NULL)
     {
         printf("Failed to read file\n");
@@ -154,10 +203,8 @@ int main()
 
     // calculate header checksum and compare
     rewind(fp);
-
 	unsigned char buf[128];
     fread(&buf, sizeof(buf), 1, fp);
-
     unsigned char header_sum = calculate_header_sum(buf);
 
     if (header_sum == file_header.header_checksum)
@@ -184,7 +231,7 @@ int main()
     unsigned char* data_buf = malloc(data_size * sizeof(unsigned char));
     fread(data_buf, sizeof(unsigned char), data_size, fp);
 
-    // calculate data checks um and compare
+    // calculate data checksum and compare
     unsigned int data_sum = calculate_body_sum(data_buf, data_size);
 
     if (data_sum == file_header.data_checksum)
@@ -195,12 +242,15 @@ int main()
     }
 
     // do something with the data
+    RGB* rgb_data = malloc(lut_size * sizeof(RGB));
     unsigned char* value = data_buf;
     RGB test_rgb;
     for(int i = 0; i < lut_size; i++)
     {
-        test_rgb = get_10_bit_RGB_from_32_bit_chunk(value + (i*4));
+       rgb_data[i] = get_10_bit_RGB_from_32_bit_chunk(value + (i*4));
     }
+
+    save_cube_file(file_header, rgb_data, 10, cube_size);
 
     // check we're at the end of the file
     long end_of_data = ftell(fp);
