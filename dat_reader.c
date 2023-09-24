@@ -112,6 +112,30 @@ void print_header(FileHeader file_header)
     printf("header_checksum: %u\n", file_header.header_checksum);
 }
 
+// Calculate the checksum of the .dat file's header. Assumes header is 128 bytes long
+unsigned char calculate_header_sum(unsigned char* buf)
+{   
+    unsigned char header_sum = 0;
+    for (int i = 0; i < 127; i++) // 127 not 128 to avoid counting the checksum value itself
+    {
+	    header_sum += buf[i];
+    }
+
+    return header_sum;
+}
+
+// Calculate the checksum of the .dat file's body.
+unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
+{
+    unsigned int data_sum = 0;
+	for (int i = 0; i < data_size; i++)
+    {
+	    data_sum += (unsigned int)data_buf[i];
+    }
+
+    return data_sum;
+}
+
 
 int main()
 {
@@ -130,14 +154,12 @@ int main()
 
     // calculate header checksum and compare
     rewind(fp);
-    unsigned char header_sum = 0;
+
 	unsigned char buf[128];
     fread(&buf, sizeof(buf), 1, fp);
-    for (int i = 0; i < 127; i++) // 127 not 128 to avoid counting the checksum value itself
-    {
-	    header_sum += buf[i];
-    }
-    
+
+    unsigned char header_sum = calculate_header_sum(buf);
+
     if (header_sum == file_header.header_checksum)
     {
         printf("Header checksum matches (%d)\n", header_sum);
@@ -163,17 +185,13 @@ int main()
     fread(data_buf, sizeof(unsigned char), data_size, fp);
 
     // calculate data checks um and compare
-    unsigned int data_sum = 0;
-	for (int i = 0; i < data_size; i++)
-    {
-	    data_sum += (unsigned int)data_buf[i];
-    }
+    unsigned int data_sum = calculate_body_sum(data_buf, data_size);
 
     if (data_sum == file_header.data_checksum)
     {
         printf("Data checksum matches (%d)\n", data_sum);
     } else {
-        printf("ERROR: Data checksum does not match\n");
+        printf("ERROR: Data checksum does not match (%d)\n", data_sum);
     }
 
     // do something with the data
