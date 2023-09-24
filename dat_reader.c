@@ -35,13 +35,16 @@ typedef struct FloatRGB {
 RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
 {
     RGB rgb;
-    rgb.r = (value[0] << 2) + (value[1] >> 6);
+    // Initilise values
+    rgb.r = 0;
+    rgb.g = 0;
+    rgb.b = 0;
 
-    uint8_t mask = 0x3f;
-    rgb.g = ((value[1] & mask) << 4) + (value[2] >> 4);
+   rgb.r = ((value[2] & 0x03) << 8) + value[3];
 
-    mask = 0x0f;
-    rgb.b = ((value[2] & mask) << 6)+ (value[3] >> 2);
+   rgb.g = ((value[1] & 0x0f) << 6) + ((value[2] & 0xfc) >> 2);
+
+   rgb.b = ((value[0] << 4)) + ((value[1] & 0xf0)  >> 4);
 
     if (rgb.r > 1023 || rgb.g > 1023 || rgb.b > 1023)
     {
@@ -189,7 +192,7 @@ int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size)
 int main()
 {
     FILE *fp;
-    fp = fopen("fsi_sample_luts\\dit16.dat", "rb");
+    fp = fopen("fsi_sample_luts\\dit04.dat", "rb");
     if(fp == NULL)
     {
         printf("Failed to read file\n");
