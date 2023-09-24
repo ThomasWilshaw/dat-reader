@@ -19,6 +19,13 @@ typedef struct FileHeader {
 	unsigned char header_checksum;  // file header sum
 } FileHeader;
 
+typedef struct CubeHeader {
+    char title[256];
+    int lut_size;
+    float domain_min;
+    float domain_max;
+} CubeHeader;
+
 typedef struct RGB {
     uint16_t r;
     uint16_t g;
@@ -133,6 +140,7 @@ int get_bytes_per_chunk(unsigned long length)
 
 }
 
+// Prints the header information from a dat file
 void print_header(FileHeader file_header)
 {
     printf("---HEADER---\n");
@@ -174,6 +182,7 @@ unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
     return data_sum;
 }
 
+// Creates and saves a cube file from the header information and file data from the dat file
 int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size, char* output_name)
 {
     FILE* cube;
@@ -197,6 +206,7 @@ int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size, ch
     return 1;
 }
 
+// Converts a dat file (fp) to a cube file (output)
 int dat_to_cube(FILE* fp, char* output)
 {
     // read header into FileHEader struct and print
@@ -276,6 +286,7 @@ int dat_to_cube(FILE* fp, char* output)
     return 1;
 }
 
+// Print cmd usage
 void print_usage()
 {
     printf("Usage:\n");
@@ -283,7 +294,39 @@ void print_usage()
     printf("\t\tConverts input.dat to output.cube\n\n");
 
     printf("\t-ctd input.cube input.dat\n");
-    printf("\t\tConverts input.cube to input.dat (NOT IMPLEMENTED YET)\n");
+    printf("\t\tConverts input.cube to output.dat (NOT IMPLEMENTED YET)\n");
+}
+
+int read_header(FILE* fp, CubeHeader* header)
+{
+    char buf[256];
+
+    while(fgets(buf, 256, fp))
+    {
+        if(strncmp(buf, "TITLE", 5) == 0)
+        {
+            printf("%s\n", buf);
+        }
+        else if(strncmp(buf, "LUT_3D_SIZE", 11) == 0)
+        {
+            printf("%s\n", buf);
+        } else {
+            break;
+        }
+    }
+
+    return 0;
+}
+
+int cube_to_dat(FILE* fp, char* output)
+{
+    printf("converting cube to .dat: %s\n", output);
+
+    CubeHeader* header;
+
+    read_header(fp, header);
+
+    return 0;
 }
 
 
@@ -295,7 +338,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if (strcmp(argv[1], "-dtc") == 0 && argc == 3 || argc == 4){
+    if (strcmp(argv[1], "-dtc") == 0 && (argc == 3 || argc == 4)){
         FILE *fp;
         // "fsi_sample_luts\\dit04.dat"
         fp = fopen(argv[2], "rb");
@@ -310,6 +353,23 @@ int main(int argc, char *argv[])
         } else
         {
             dat_to_cube(fp, "output.cube");
+        }
+    } else if(strcmp(argv[1], "-ctd") == 0 && (argc == 3 || argc == 4))
+    {
+        FILE *fp;
+        // "fsi_sample_luts\\dit04.dat"
+        fp = fopen(argv[2], "rb");
+        if(fp == NULL)
+        {
+            printf("Failed to read file, %s\n", argv[2]);
+            exit(0);
+        }
+        if (argc == 4)
+        {
+            cube_to_dat(fp, argv[3]);
+        } else
+        {
+            cube_to_dat(fp, "output.dat");
         }
     } else
     {
