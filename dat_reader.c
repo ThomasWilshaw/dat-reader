@@ -22,8 +22,6 @@ typedef struct FileHeader {
 typedef struct CubeHeader {
     char title[256];
     int lut_size;
-    float domain_min;
-    float domain_max;
 } CubeHeader;
 
 typedef struct RGB {
@@ -297,34 +295,74 @@ void print_usage()
     printf("\t\tConverts input.cube to output.dat (NOT IMPLEMENTED YET)\n");
 }
 
-int read_header(FILE* fp, CubeHeader* header)
+// Reads the header data from a .cube into a CubeHeader struct
+int read_cube_header(FILE* fp, CubeHeader* header)
 {
     char buf[256];
+    int line_count = 0;
 
     while(fgets(buf, 256, fp))
     {
         if(strncmp(buf, "TITLE", 5) == 0)
         {
-            printf("%s\n", buf);
+            sscanf(buf, "TITLE \"%[^\"]\"", header->title);
+            line_count++;
         }
         else if(strncmp(buf, "LUT_3D_SIZE", 11) == 0)
         {
-            printf("%s\n", buf);
+            sscanf(buf, "LUT_3D_SIZE %d", &header->lut_size);
+            line_count++;
+        }
+        else if(strncmp(buf, "#", 1) == 0 ||
+                  strncmp(buf, "DOMAIN_MIN", 10) == 0 ||
+                  strncmp(buf, "DOMAIN_MAX", 10) == 0)
+        {
+            line_count++;
+            continue;
         } else {
             break;
         }
     }
 
+    // the above code takes the file pointer one line to far so here we undo that.
+    // move to the start of the file and then seek through the correct number of lines
+    fseek(fp, 0, SEEK_SET);
+    for(int i = 0; i < line_count; i++)
+    {
+        fgets(buf, 256, fp);
+    }
+
     return 0;
+}
+
+// Print CubeHeader struct
+void printf_cube_header(CubeHeader header)
+{
+    printf("---CUBE HEADER---\n");
+    printf("Title: %s\n", header.title);
+    printf("Lut size: %d\n", header.lut_size);
 }
 
 int cube_to_dat(FILE* fp, char* output)
 {
     printf("converting cube to .dat: %s\n", output);
 
-    CubeHeader* header;
+    CubeHeader header;
 
-    read_header(fp, header);
+    read_cube_header(fp, &header);
+
+    printf_cube_header(header);
+    int lut_size = header.lut_size*header.lut_size*header.lut_size;
+
+    // Read the float data into an array of FloatRGB structs
+    char buf[256];
+    FloatRGB* rgb = malloc(lut_size * sizeof(FloatRGB));
+    int i = 0;
+
+    while(fgets(buf, 256, fp) != NULL){
+        sscanf(buf, "%f %f %f", &rgb[i].r, &rgb[i].g, &rgb[i].b);
+        i++;
+    }
 
     return 0;
 }
