@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct FileHeader {
+typedef struct DatHeader {
 	unsigned long magic;            // 4Bytes, must be 0x42340299(little endian)
 	unsigned long ver;              // 4Bytes, 0x02000001(little endian)
 	char model[16];                 // 16Bytes, monitor model, e.g. "LM-2461W", "CM170". NOTE: model string must match target monitor's model
@@ -17,7 +17,7 @@ typedef struct FileHeader {
 	char reserved[42];              // 43 Bytes, reserved
 	uint8_t size;                   // 17 for 17x17x17
 	unsigned char header_checksum;  // file header sum
-} FileHeader;
+} DatHeader;
 
 typedef struct CubeHeader {
     char title[256];
@@ -36,7 +36,7 @@ typedef struct FloatRGB {
     float b;
 } FloatRGB;
 
-void initilise_dat_header(FileHeader* header)
+void initilise_dat_header(DatHeader* header)
 {
     header->magic = 0x42340299;
     header->ver = 0x02000001;
@@ -201,7 +201,7 @@ void print_IntRGB(IntRGB rgb)
 }
 
 // Prints the header information from a dat file
-void print_header(FileHeader file_header)
+void print_header(DatHeader file_header)
 {
     printf("---HEADER---\n");
     printf("magic: %#010x\n", file_header.magic);
@@ -243,7 +243,7 @@ unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
 }
 
 // Creates and saves a cube file from the header information and file data from the dat file
-int save_cube_file(FileHeader header, IntRGB* data, int bit_depth, int lut_size, char* output_name)
+int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, char* output_name)
 {
     FILE* cube;
     cube = fopen(output_name, "w");
@@ -275,7 +275,7 @@ int inpsect_dat_file(char* input)
         printf("Failed to read file (%s)\n", input);
         exit(0);
     }
-    FileHeader file_header;
+    DatHeader file_header;
     fread(&file_header, sizeof(file_header), 1, fp);
     print_header(file_header);
 
@@ -300,7 +300,7 @@ int inpsect_dat_file(char* input)
 int dat_to_cube(FILE* fp, char* output)
 {
     // read header into FileHEader struct and print
-    FileHeader file_header;
+    DatHeader file_header;
     fread(&file_header, sizeof(file_header), 1, fp);
     print_header(file_header);
 
@@ -467,7 +467,7 @@ int cube_to_dat(FILE* fp, char* output)
     int body_sum = calculate_body_sum(data, lut_size*4);
 
     // Create header
-    FileHeader dat_header;
+    DatHeader dat_header;
     initilise_dat_header(&dat_header);
     dat_header.data_checksum = body_sum;
     dat_header.length = lut_size*4;
