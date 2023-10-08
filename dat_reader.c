@@ -444,12 +444,12 @@ int cube_to_dat(FILE* fp, char* output)
 {
     printf("converting cube to .dat: %s\n", output);
 
-    CubeHeader header;
+    CubeHeader cube_header;
 
-    read_cube_header(fp, &header);
+    read_cube_header(fp, &cube_header);
 
-    printf_cube_header(header);
-    int lut_size = header.lut_size*header.lut_size*header.lut_size;
+    printf_cube_header(cube_header);
+    int lut_size = cube_header.lut_size*cube_header.lut_size*cube_header.lut_size;
 
     // Read the float data into an array of FloatRGB structs
     char buf[256];
@@ -475,8 +475,8 @@ int cube_to_dat(FILE* fp, char* output)
     initilise_dat_header(&dat_header);
     dat_header.data_checksum = body_sum;
     dat_header.length = lut_size*4;
-    strcpy(dat_header.description, "Made by Tom");
-    dat_header.size = header.lut_size;
+    strncpy(dat_header.description, cube_header.title, 15);
+    dat_header.size = cube_header.lut_size;
     dat_header.header_checksum = calculate_dat_header_sum((unsigned char *)&dat_header);
 
     // write file
