@@ -254,7 +254,7 @@ int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, 
         printf("Failed to read file (%s)\n", output_name);
         exit(0);
     }
-    fprintf(cube, "TITLE %s\n", header.name);
+    fprintf(cube, "TITLE \"%s\"\n", header.description);
     fprintf(cube, "LUT_3D_SIZE %d\n", lut_size);
 
     for(int i = 0; i < lut_size*lut_size*lut_size; i++)
@@ -304,7 +304,6 @@ int dat_to_cube(FILE* fp, char* output)
     // read header into DatHeader struct and print
     DatHeader file_header;
     fread(&file_header, sizeof(file_header), 1, fp);
-    print_dat_header(file_header);
 
     // calculate header checksum and compare
     rewind(fp);
@@ -314,7 +313,7 @@ int dat_to_cube(FILE* fp, char* output)
 
     if (header_sum == file_header.header_checksum)
     {
-        printf("Header checksum matches (%d)\n", header_sum);
+        //printf("Header checksum matches (%d)\n", header_sum);
     } else
     {
         printf("ERROR: Header checksum does not match\n");
@@ -323,11 +322,6 @@ int dat_to_cube(FILE* fp, char* output)
     // figure out lut size
     int cube_size = get_dat_cube_size(file_header.length);
     int bytes_per_chunk = get_bytes_per_chunk(file_header.length);
-    printf("\n");
-    printf("Cube size: %d\n", cube_size);
-    printf("Bytes per chunk: %d\n", bytes_per_chunk);
-
-    printf("\n---DATA---\n");
 
     uint16_t lut_size = cube_size*cube_size*cube_size; // number of rgb data points in the lut
     uint16_t data_size = lut_size*bytes_per_chunk; // size of entire data source
@@ -341,7 +335,7 @@ int dat_to_cube(FILE* fp, char* output)
 
     if (data_sum == file_header.data_checksum)
     {
-        printf("Data checksum matches (%d)\n", data_sum);
+        //printf("Data checksum matches (%d)\n", data_sum);
     } else {
         printf("ERROR: Data checksum does not match (%d)\n", data_sum);
     }
@@ -353,7 +347,7 @@ int dat_to_cube(FILE* fp, char* output)
 
     if(end_of_data == ftell(fp))
     {
-        printf("Reached EOF, file is expected length\n");
+        //printf("Reached EOF, file is expected length\n");
         fclose(fp);
     } else{
         printf("ERROR: Not reached EOF, file is malformed\n");
@@ -448,7 +442,6 @@ int cube_to_dat(FILE* fp, char* output)
 
     read_cube_header(fp, &cube_header);
 
-    printf_cube_header(cube_header);
     int lut_size = cube_header.lut_size*cube_header.lut_size*cube_header.lut_size;
 
     // Read the float data into an array of FloatRGB structs
@@ -461,7 +454,6 @@ int cube_to_dat(FILE* fp, char* output)
     while(fgets(buf, 256, fp) != NULL){
         sscanf(buf, "%f %f %f", &rgb.r, &rgb.g, &rgb.b);
         IntRGB int_rgb = convert_FloatRGB_to_IntRGB(rgb, 10);
-        print_IntRGB(int_rgb);
         get_32_bit_chunk_from_10_bit_IntRGB(int_rgb, chunk);
         memcpy(&data[i*4], chunk, 4);
         i++;
