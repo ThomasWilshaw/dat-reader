@@ -36,6 +36,7 @@ typedef struct FloatRGB {
     float b;
 } FloatRGB;
 
+// Set and clear relevant values in a DatHeader
 void initilise_dat_header(DatHeader* header)
 {
     header->magic = 0x42340299;
@@ -48,8 +49,8 @@ void initilise_dat_header(DatHeader* header)
     memset(&header->reserved[0], 0, 42);
 }
 
-// Returns the RGB triplet from a 32bit chunk
 /*
+    Returns the RGB triplet from a 32bit chunk
     32bit RGB data is stored as follows:
     --BBBBBB BBBBGGGG GGGGGGRR RRRRRRRR
 */
@@ -78,7 +79,8 @@ IntRGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
     return rgb;
 }
 
-/* Converts an IntRGB into a 32bit chunk.
+/*
+   Converts an IntRGB into a 32bit chunk.
    Assumes output is an array of length 4
    Clears output variable
 */
@@ -135,9 +137,9 @@ IntRGB convert_FloatRGB_to_IntRGB(FloatRGB rgb, int bit_depth)
     }
     if (bit_depth == 12)
     {
-        output.r = (uint16_t)floor(rgb.r * 4095.0 + 0.5);
-        output.g = (uint16_t)floor(rgb.g * 4095.0 + 0.5);
-        output.b = (uint16_t)floor(rgb.b * 4095.0 + 0.5);
+        output.r = (int)(rgb.r * 4095.0 + 0.5);
+        output.g = (int)(rgb.g * 4095.0 + 0.5);
+        output.b = (int)(rgb.b * 4095.0 + 0.5);
 
         return output;
     }
@@ -148,21 +150,21 @@ IntRGB convert_FloatRGB_to_IntRGB(FloatRGB rgb, int bit_depth)
 
 
 // Returns the cube size based on the data length
-int get_cube_size(unsigned long length)
+int get_dat_cube_size(unsigned long length)
 {
-    if (length == 17*17*17*4)
+    if (length == 17*17*17*4) // 10 bit
     {
         return 17;
     }
-    if (length == 17*17*17*8)
+    if (length == 17*17*17*8) // 12 bit
     {
         return 17;
     }
-    if (length == 33*33*33*4)
+    if (length == 33*33*33*4) // 10 bit
     {
         return 33;
     }
-    if (length == 33*33*33*8)
+    if (length == 33*33*33*8) // 12 bit
     {
         return 33;
     }
@@ -201,7 +203,7 @@ void print_IntRGB(IntRGB rgb)
 }
 
 // Prints the header information from a dat file
-void print_header(DatHeader file_header)
+void print_dat_header(DatHeader file_header)
 {
     printf("---HEADER---\n");
     printf("magic: %#010x\n", file_header.magic);
@@ -219,7 +221,7 @@ void print_header(DatHeader file_header)
 }
 
 // Calculate the checksum of the .dat file's header. Assumes header is 128 bytes long
-unsigned char calculate_header_sum(unsigned char* buf)
+unsigned char calculate_dat_header_sum(unsigned char* buf)
 {   
     unsigned char header_sum = 0;
     for (int i = 0; i < 127; i++) // 127 not 128 to avoid counting the checksum value itself
@@ -231,7 +233,7 @@ unsigned char calculate_header_sum(unsigned char* buf)
 }
 
 // Calculate the checksum of the .dat file's body.
-unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
+unsigned int calculate_dat_body_sum(unsigned char* data_buf, uint16_t data_size)
 {
     unsigned int data_sum = 0;
 	for (int i = 0; i < data_size; i++)
@@ -266,7 +268,7 @@ int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, 
     return 1;
 }
 
-// Inspect dat file
+// Inspect and print dat file
 int inpsect_dat_file(char* input)
 {
     FILE* fp = fopen(input, "rb");
@@ -277,13 +279,13 @@ int inpsect_dat_file(char* input)
     }
     DatHeader file_header;
     fread(&file_header, sizeof(file_header), 1, fp);
-    print_header(file_header);
+    print_dat_header(file_header);
 
     // calculate header checksum and compare
     rewind(fp);
 	unsigned char buf[128];
     fread(&buf, sizeof(buf), 1, fp);
-    unsigned char header_sum = calculate_header_sum(buf);
+    unsigned char header_sum = calculate_dat_header_sum(buf);
 
     if (header_sum == file_header.header_checksum)
     {
@@ -299,16 +301,16 @@ int inpsect_dat_file(char* input)
 // Converts a dat file (fp) to a cube file (output)
 int dat_to_cube(FILE* fp, char* output)
 {
-    // read header into FileHEader struct and print
+    // read header into DatHeader struct and print
     DatHeader file_header;
     fread(&file_header, sizeof(file_header), 1, fp);
-    print_header(file_header);
+    print_dat_header(file_header);
 
     // calculate header checksum and compare
     rewind(fp);
 	unsigned char buf[128];
     fread(&buf, sizeof(buf), 1, fp);
-    unsigned char header_sum = calculate_header_sum(buf);
+    unsigned char header_sum = calculate_dat_header_sum(buf);
 
     if (header_sum == file_header.header_checksum)
     {
@@ -319,7 +321,7 @@ int dat_to_cube(FILE* fp, char* output)
     }
 
     // figure out lut size
-    int cube_size = get_cube_size(file_header.length);
+    int cube_size = get_dat_cube_size(file_header.length);
     int bytes_per_chunk = get_bytes_per_chunk(file_header.length);
     printf("\n");
     printf("Cube size: %d\n", cube_size);
@@ -335,7 +337,7 @@ int dat_to_cube(FILE* fp, char* output)
     fread(data_buf, sizeof(unsigned char), data_size, fp);
 
     // calculate data checksum and compare
-    unsigned int data_sum = calculate_body_sum(data_buf, data_size);
+    unsigned int data_sum = calculate_dat_body_sum(data_buf, data_size);
 
     if (data_sum == file_header.data_checksum)
     {
@@ -384,7 +386,10 @@ void print_usage()
     printf("\t\tConverts input.dat to output.cube\n\n");
 
     printf("\t-ctd input.cube input.dat\n");
-    printf("\t\tConverts input.cube to output.dat (NOT IMPLEMENTED YET)\n");
+    printf("\t\tConverts input.cube to output.dat (only works with cubes with a resolution of 17)\n");
+
+    printf("\t -inspect input.dat\n");
+    printf("\t\tPrints the dat header and checks the header checksum is correct\n");
 }
 
 // Reads the header data from a .cube into a CubeHeader struct
@@ -448,7 +453,6 @@ int cube_to_dat(FILE* fp, char* output)
 
     // Read the float data into an array of FloatRGB structs
     char buf[256];
-    //FloatRGB* rgb = malloc(lut_size * sizeof(FloatRGB));
     FloatRGB rgb;
     unsigned char chunk[4];
     unsigned char* data = malloc(lut_size * 4 * sizeof(unsigned char));
@@ -464,7 +468,7 @@ int cube_to_dat(FILE* fp, char* output)
     }
 
     // generate data check sum
-    int body_sum = calculate_body_sum(data, lut_size*4);
+    int body_sum = calculate_dat_body_sum(data, lut_size*4);
 
     // Create header
     DatHeader dat_header;
@@ -473,7 +477,7 @@ int cube_to_dat(FILE* fp, char* output)
     dat_header.length = lut_size*4;
     strcpy(dat_header.description, "Made by Tom");
     dat_header.size = header.lut_size;
-    dat_header.header_checksum = calculate_header_sum((unsigned char *)&dat_header);
+    dat_header.header_checksum = calculate_dat_header_sum((unsigned char *)&dat_header);
 
     // write file
     FILE* out_file = fopen(output, "wb");
