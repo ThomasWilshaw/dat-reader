@@ -36,6 +36,18 @@ typedef struct FloatRGB {
     float b;
 } FloatRGB;
 
+void initilise_dat_header(FileHeader* header)
+{
+    header->magic = 0x42340299;
+    header->ver = 0x02000001;
+    memset(&header->model[0], 0, 16);
+    memset(&header->version[0], 0, 16);
+    memset(&header->description[0], 0, 16);
+    header->reserved2 = 0;
+    memset(&header->name[0], 0, 16);
+    memset(&header->reserved[0], 0, 42);
+}
+
 // Returns the RGB triplet from a 32bit chunk
 /*
     32bit RGB data is stored as follows:
@@ -254,6 +266,36 @@ int save_cube_file(FileHeader header, IntRGB* data, int bit_depth, int lut_size,
     return 1;
 }
 
+// Inspect dat file
+int inpsect_dat_file(char* input)
+{
+    FILE* fp = fopen(input, "rb");
+    if (fp == NULL)
+    {
+        printf("Failed to read file (%s)\n", input);
+        exit(0);
+    }
+    FileHeader file_header;
+    fread(&file_header, sizeof(file_header), 1, fp);
+    print_header(file_header);
+
+    // calculate header checksum and compare
+    rewind(fp);
+	unsigned char buf[128];
+    fread(&buf, sizeof(buf), 1, fp);
+    unsigned char header_sum = calculate_header_sum(buf);
+
+    if (header_sum == file_header.header_checksum)
+    {
+        printf("Header checksum matches (%d)\n", header_sum);
+    } else
+    {
+        printf("ERROR: Header checksum does not match\n");
+    }
+
+    return 1;
+}
+
 // Converts a dat file (fp) to a cube file (output)
 int dat_to_cube(FILE* fp, char* output)
 {
@@ -426,12 +468,11 @@ int cube_to_dat(FILE* fp, char* output)
 
     // Create header
     FileHeader dat_header;
-    dat_header.magic = 0x42340299;
-    dat_header.ver =  0x02000001;
+    initilise_dat_header(&dat_header);
     dat_header.data_checksum = body_sum;
     dat_header.length = lut_size*4;
     strcpy(dat_header.description, "Made by Tom");
-    dat_header.size = lut_size;
+    dat_header.size = header.lut_size;
     dat_header.header_checksum = calculate_header_sum((unsigned char *)&dat_header);
 
     // write file
@@ -492,6 +533,9 @@ int main(int argc, char *argv[])
         {
             cube_to_dat(fp, "output.dat");
         }
+    } else if(strcmp(argv[1], "-inspect") == 0 && argc == 3)
+    {
+        inpsect_dat_file(argv[2]);
     } else
     {
         print_usage();
