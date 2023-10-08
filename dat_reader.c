@@ -24,11 +24,11 @@ typedef struct CubeHeader {
     int lut_size;
 } CubeHeader;
 
-typedef struct RGB {
+typedef struct IntRGB {
     uint16_t r;
     uint16_t g;
     uint16_t b;
-} RGB;
+} IntRGB;
 
 typedef struct FloatRGB {
     float r;
@@ -41,9 +41,9 @@ typedef struct FloatRGB {
     32bit RGB data is stored as follows:
     --BBBBBB BBBBGGGG GGGGGGRR RRRRRRRR
 */
-RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
+IntRGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
 {
-    RGB rgb;
+    IntRGB rgb;
     // Initilise values
     rgb.r = 0;
     rgb.g = 0;
@@ -66,7 +66,25 @@ RGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
     return rgb;
 }
 
-FloatRGB convert_RGB_to_FloatRGB(RGB rgb, int bit_depth)
+/* Converts an IntRGB into a 32bit chunk.
+   Assumes output is an array of length 4
+   Clears output variable
+*/
+void get_32_bit_chunk_from_10_bit_IntRGB(IntRGB rgb, unsigned char* output)
+{
+    output[0] = 0x00;
+    output[1] = 0x00;
+    output[2] = 0x00;
+    output[3] = 0x00;
+
+    output[0] = rgb.b >> 4;
+    output[1] = ((rgb.b & 0x000f) << 4) + ((rgb.g & 0x03C0) >> 6);
+    output[2] = ((rgb.g & 0x003f) << 2) + ((rgb.r & 0x0300) >> 8);
+    output[3] = (rgb.r & 0x00ff);
+}
+
+// Convert IntRGB to FloatRGB. Supports 10 and 12 bit
+FloatRGB convert_IntRGB_to_FloatRGB(IntRGB rgb, int bit_depth)
 {
     FloatRGB output;
     
@@ -90,6 +108,32 @@ FloatRGB convert_RGB_to_FloatRGB(RGB rgb, int bit_depth)
     printf("ERROR: Invalid bit dpeth used\n");
     exit(1);
 }
+
+// Convert FloatRGB to int IntRGB. Supports 10 and 12 bit
+IntRGB convert_FloatRGB_to_IntRGB(FloatRGB rgb, int bit_depth)
+{
+    IntRGB output;
+    if (bit_depth == 10)
+    {
+        output.r = (int)(rgb.r * 1023.0 + 0.5);
+        output.g = (int)(rgb.g * 1023.0 + 0.5);
+        output.b = (int)(rgb.b * 1023.0 + 0.5);
+
+        return output;
+    }
+    if (bit_depth == 12)
+    {
+        output.r = (uint16_t)floor(rgb.r * 4095.0 + 0.5);
+        output.g = (uint16_t)floor(rgb.g * 4095.0 + 0.5);
+        output.b = (uint16_t)floor(rgb.b * 4095.0 + 0.5);
+
+        return output;
+    }
+
+    printf("ERROR: Invalid bit dpeth used\n");
+    exit(1);
+}
+
 
 // Returns the cube size based on the data length
 int get_cube_size(unsigned long length)
@@ -138,6 +182,12 @@ int get_bytes_per_chunk(unsigned long length)
 
 }
 
+// Print IntRGB
+void print_IntRGB(IntRGB rgb)
+{
+    printf("%d, %d, %d\n", rgb.r, rgb.g, rgb.b);
+}
+
 // Prints the header information from a dat file
 void print_header(FileHeader file_header)
 {
@@ -181,7 +231,7 @@ unsigned int calculate_body_sum(unsigned char* data_buf, uint16_t data_size)
 }
 
 // Creates and saves a cube file from the header information and file data from the dat file
-int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size, char* output_name)
+int save_cube_file(FileHeader header, IntRGB* data, int bit_depth, int lut_size, char* output_name)
 {
     FILE* cube;
     cube = fopen(output_name, "w");
@@ -195,7 +245,7 @@ int save_cube_file(FileHeader header, RGB* data, int bit_depth, int lut_size, ch
 
     for(int i = 0; i < lut_size*lut_size*lut_size; i++)
     {
-        FloatRGB float_rgb = convert_RGB_to_FloatRGB(data[i], bit_depth);
+        FloatRGB float_rgb = convert_IntRGB_to_FloatRGB(data[i], bit_depth);
         fprintf(cube, "%.6f %.6f %.6f\n", float_rgb.r, float_rgb.g, float_rgb.b);
     }
 
@@ -268,9 +318,9 @@ int dat_to_cube(FILE* fp, char* output)
     }
 
     // copy data to buffer and convert to RGB struct
-    RGB* rgb_data = malloc(lut_size * sizeof(RGB));
+    IntRGB* rgb_data = malloc(lut_size * sizeof(IntRGB));
     unsigned char* value = data_buf;
-    RGB test_rgb;
+    IntRGB test_rgb;
     for(int i = 0; i < lut_size; i++)
     {
        rgb_data[i] = get_10_bit_RGB_from_32_bit_chunk(value + (i*4));
@@ -356,13 +406,46 @@ int cube_to_dat(FILE* fp, char* output)
 
     // Read the float data into an array of FloatRGB structs
     char buf[256];
-    FloatRGB* rgb = malloc(lut_size * sizeof(FloatRGB));
+    //FloatRGB* rgb = malloc(lut_size * sizeof(FloatRGB));
+    FloatRGB rgb;
+    unsigned char chunk[4];
+    unsigned char* data = malloc(lut_size * 4 * sizeof(unsigned char));
     int i = 0;
 
     while(fgets(buf, 256, fp) != NULL){
-        sscanf(buf, "%f %f %f", &rgb[i].r, &rgb[i].g, &rgb[i].b);
+        sscanf(buf, "%f %f %f", &rgb.r, &rgb.g, &rgb.b);
+        IntRGB int_rgb = convert_FloatRGB_to_IntRGB(rgb, 10);
+        print_IntRGB(int_rgb);
+        get_32_bit_chunk_from_10_bit_IntRGB(int_rgb, chunk);
+        memcpy(&data[i*4], chunk, 4);
         i++;
     }
+
+    // generate data check sum
+    int body_sum = calculate_body_sum(data, lut_size*4);
+
+    // Create header
+    FileHeader dat_header;
+    dat_header.magic = 0x42340299;
+    dat_header.ver =  0x02000001;
+    dat_header.data_checksum = body_sum;
+    dat_header.length = lut_size*4;
+    strcpy(dat_header.description, "Made by Tom");
+    dat_header.size = lut_size;
+    dat_header.header_checksum = calculate_header_sum((unsigned char *)&dat_header);
+
+    // write file
+    FILE* out_file = fopen(output, "wb");
+    if(out_file == NULL){
+        printf("Cannot open file\n");
+        exit(0);
+    }
+
+    fwrite(&dat_header, sizeof(dat_header), 1, out_file);
+    fwrite(data, sizeof(unsigned char), lut_size * 4, out_file);
+
+    fclose(out_file);
+
 
     return 0;
 }
