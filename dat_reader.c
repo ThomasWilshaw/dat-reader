@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <conio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -451,7 +450,7 @@ int cube_to_dat(FILE* fp, char* output)
     unsigned char* data = malloc(lut_size * 4 * sizeof(unsigned char));
     int i = 0;
 
-    while(fgets(buf, 256, fp) != NULL){
+    while(fgets(buf, 256, fp) != NULL && i < lut_size){
         sscanf(buf, "%f %f %f", &rgb.r, &rgb.g, &rgb.b);
         IntRGB int_rgb = convert_FloatRGB_to_IntRGB(rgb, 10);
         get_32_bit_chunk_from_10_bit_IntRGB(int_rgb, chunk);
@@ -482,6 +481,7 @@ int cube_to_dat(FILE* fp, char* output)
     fwrite(data, sizeof(unsigned char), lut_size * 4, out_file);
 
     fclose(out_file);
+    free(data);
 
 
     return 0;
@@ -512,6 +512,7 @@ int main(int argc, char *argv[])
         {
             dat_to_cube(fp, "output.cube");
         }
+        fclose(fp);
     } else if(strcmp(argv[1], "-ctd") == 0 && (argc == 3 || argc == 4))
     {
         FILE *fp;
@@ -529,6 +530,7 @@ int main(int argc, char *argv[])
         {
             cube_to_dat(fp, "output.dat");
         }
+        fclose(fp);
     } else if(strcmp(argv[1], "-inspect") == 0 && argc == 3)
     {
         inpsect_dat_file(argv[2]);
