@@ -273,6 +273,8 @@ int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, 
 
 /*
   Read dat header data from buffer into a DatHeader
+  Uses multiple memcpy's rather than a single fread into a struct because Linux
+  and Windows have different lengths for certain types
 */
 void read_dat_header(char* buf, DatHeader* header)
 {
@@ -291,7 +293,7 @@ void read_dat_header(char* buf, DatHeader* header)
 }
 
 // Inspect and print dat file
-int inpsect_dat_file(char* input)
+int inspect_dat_file(char* input)
 {
     FILE* fp = fopen(input, "rb");
     if (fp == NULL)
@@ -411,7 +413,10 @@ void print_usage()
     printf("\t\tPrints the dat header and checks the header checksum is correct\n");
 }
 
-// Reads the header data from a .cube into a CubeHeader struct
+/*
+  Reads the header data from a .cube into a CubeHeader struct
+  Moves the file pointer to the end of the header
+*/
 int read_cube_header(FILE* fp, CubeHeader* header)
 {
     char buf[256];
@@ -559,7 +564,7 @@ int main(int argc, char *argv[])
         fclose(fp);
     } else if(strcmp(argv[1], "-inspect") == 0 && argc == 3)
     {
-        inpsect_dat_file(argv[2]);
+        inspect_dat_file(argv[2]);
     } else
     {
         print_usage();

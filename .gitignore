@@ -1,6 +1,8 @@
 *.exe
 *.obj
+*.out
 .vs/*
+.vscode/*
 *.pdb
 *.idb
 *.ilk
