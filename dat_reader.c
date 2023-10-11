@@ -380,9 +380,9 @@ void print_usage()
     printf("\t\tConverts input.dat to output.cube\n\n");
 
     printf("\t-ctd input.cube input.dat\n");
-    printf("\t\tConverts input.cube to output.dat (only works with cubes with a resolution of 17)\n");
+    printf("\t\tConverts input.cube to output.dat (only works with cubes with a resolution of 17)\n\n");
 
-    printf("\t -inspect input.dat\n");
+    printf("\t-inspect input.dat\n");
     printf("\t\tPrints the dat header and checks the header checksum is correct\n");
 }
 
