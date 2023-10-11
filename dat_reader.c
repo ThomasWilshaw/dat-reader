@@ -9,7 +9,11 @@ typedef struct DatHeader {
 	char model[16];                 // 16Bytes, monitor model, e.g. "LM-2461W", "CM170". NOTE: model string must match target monitor's model
 	char version[16];               // 16Bytes, data version, "x.y.zz". eg. "1.0.11"
 	unsigned long data_checksum;    // 4Bytes, FileData sum(little endian)
+#ifdef __linux__
+    int length;
+#elif _WIN32
 	unsigned long length;           // 4Bytes, data length = 1048576 (little endian)
+#endif
 	char description[16];           // 16Bytes, 3dlut description info, eg. "CalSoftware"
 	unsigned long reserved2;        // 4Bytes, reserved
 	char name[16];                  // 16Bytes, information of lut
@@ -267,6 +271,25 @@ int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, 
     return 1;
 }
 
+/*
+  Read dat header data from buffer into a DatHeader
+*/
+void read_dat_header(char* buf, DatHeader* header)
+{
+    memcpy(&header->magic, &buf[0], 4);
+    memcpy(&header->ver, &buf[4], 4);
+    memcpy(&header->model, &buf[8], 16);
+    memcpy(&header->version, &buf[24], 16);
+    memcpy(&header->data_checksum, &buf[40], 4);
+    memcpy(&header->length, &buf[44], 4);
+    memcpy(&header->description, &buf[48], 16);
+    memcpy(&header->reserved2, &buf[64], 4);
+    memcpy(&header->name, &buf[68], 16);
+    memcpy(&header->reserved, &buf[84], 42);
+    memcpy(&header->size, &buf[126], 1);
+    memcpy(&header->header_checksum, &buf[127], 1);
+}
+
 // Inspect and print dat file
 int inpsect_dat_file(char* input)
 {
@@ -276,15 +299,17 @@ int inpsect_dat_file(char* input)
         printf("Failed to read file (%s)\n", input);
         exit(0);
     }
+
+    unsigned char head_buf[128];
+    fread(&head_buf, 128, 1, fp);
+
     DatHeader file_header;
-    fread(&file_header, sizeof(file_header), 1, fp);
+    read_dat_header(head_buf, &file_header);
+
     print_dat_header(file_header);
 
     // calculate header checksum and compare
-    rewind(fp);
-	unsigned char buf[128];
-    fread(&buf, sizeof(buf), 1, fp);
-    unsigned char header_sum = calculate_dat_header_sum(buf);
+    unsigned char header_sum = calculate_dat_header_sum(head_buf);
 
     if (header_sum == file_header.header_checksum)
     {
@@ -300,15 +325,16 @@ int inpsect_dat_file(char* input)
 // Converts a dat file (fp) to a cube file (output)
 int dat_to_cube(FILE* fp, char* output)
 {
-    // read header into DatHeader struct and print
+    unsigned char head_buf[128];
+    fread(&head_buf, 128, 1, fp);
+
     DatHeader file_header;
-    fread(&file_header, sizeof(file_header), 1, fp);
+    read_dat_header(head_buf, &file_header);
+
+    print_dat_header(file_header);
 
     // calculate header checksum and compare
-    rewind(fp);
-	unsigned char buf[128];
-    fread(&buf, sizeof(buf), 1, fp);
-    unsigned char header_sum = calculate_dat_header_sum(buf);
+    unsigned char header_sum = calculate_dat_header_sum(head_buf);
 
     if (header_sum == file_header.header_checksum)
     {
@@ -332,11 +358,11 @@ int dat_to_cube(FILE* fp, char* output)
     // calculate data checksum and compare
     unsigned int data_sum = calculate_dat_body_sum(data_buf, data_size);
 
-    if (data_sum == file_header.data_checksum)
+    if (data_sum == (int)file_header.data_checksum) // cast required for Linux, see definition of DatHeader
     {
         //printf("Data checksum matches (%d)\n", data_sum);
     } else {
-        printf("ERROR: Data checksum does not match (%d)\n", data_sum);
+        printf("ERROR: Data checksum does not match (%d, %d)\n", data_sum, file_header.data_checksum);
     }
 
     // check we're at the end of the file
@@ -347,7 +373,7 @@ int dat_to_cube(FILE* fp, char* output)
     if(end_of_data == ftell(fp))
     {
         //printf("Reached EOF, file is expected length\n");
-        fclose(fp);
+        //fclose(fp);
     } else{
         printf("ERROR: Not reached EOF, file is malformed\n");
         fclose(fp);
