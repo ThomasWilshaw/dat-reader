@@ -453,7 +453,7 @@ int read_cube_header(FILE* fp, CubeHeader* header)
         fgets(buf, 256, fp);
     }
 
-    return 0;
+    return 1;
 }
 
 // Print CubeHeader struct
@@ -464,6 +464,10 @@ void printf_cube_header(CubeHeader header)
     printf("Lut size: %d\n", header.lut_size);
 }
 
+
+/*
+  Convert a cube file (fp) to a dat file (output)
+*/
 int cube_to_dat(FILE* fp, char* output)
 {
     printf("converting cube to .dat: %s\n", output);
@@ -515,7 +519,7 @@ int cube_to_dat(FILE* fp, char* output)
     free(data);
 
 
-    return 0;
+    return 1;
 }
 
 /*
