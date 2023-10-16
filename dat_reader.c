@@ -57,7 +57,7 @@ void initilise_dat_header(DatHeader* header)
     32bit RGB data is stored as follows:
     --BBBBBB BBBBGGGG GGGGGGRR RRRRRRRR
 */
-IntRGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
+IntRGB get_10_bit_RGB_from_32_bit_chunk(const unsigned char* value)
 {
     IntRGB rgb;
     // Initilise values
@@ -87,7 +87,7 @@ IntRGB get_10_bit_RGB_from_32_bit_chunk(unsigned char* value)
    Assumes output is an array of length 4
    Clears output variable
 */
-void get_32_bit_chunk_from_10_bit_IntRGB(IntRGB rgb, unsigned char* output)
+void get_32_bit_chunk_from_10_bit_IntRGB(const IntRGB rgb, unsigned char* output)
 {
     output[0] = 0x00;
     output[1] = 0x00;
@@ -101,7 +101,7 @@ void get_32_bit_chunk_from_10_bit_IntRGB(IntRGB rgb, unsigned char* output)
 }
 
 // Convert IntRGB to FloatRGB. Supports 10 and 12 bit
-FloatRGB convert_IntRGB_to_FloatRGB(IntRGB rgb, int bit_depth)
+FloatRGB convert_IntRGB_to_FloatRGB(const IntRGB rgb, const int bit_depth)
 {
     FloatRGB output;
     
@@ -127,7 +127,7 @@ FloatRGB convert_IntRGB_to_FloatRGB(IntRGB rgb, int bit_depth)
 }
 
 // Convert FloatRGB to int IntRGB. Supports 10 and 12 bit
-IntRGB convert_FloatRGB_to_IntRGB(FloatRGB rgb, int bit_depth)
+IntRGB convert_FloatRGB_to_IntRGB(const FloatRGB rgb, const int bit_depth)
 {
     IntRGB output;
     if (bit_depth == 10)
@@ -153,7 +153,7 @@ IntRGB convert_FloatRGB_to_IntRGB(FloatRGB rgb, int bit_depth)
 
 
 // Returns the cube size based on the data length
-int get_dat_cube_size(unsigned long length)
+int get_dat_cube_size(const unsigned long length)
 {
     if (length == 17*17*17*4) // 10 bit
     {
@@ -176,7 +176,7 @@ int get_dat_cube_size(unsigned long length)
 }
 
 // Return the bytes per chunk based on the data length
-int get_bytes_per_chunk(unsigned long length)
+int get_bytes_per_chunk(const unsigned long length)
 {
     if (length == 17*17*17*4)
     {
@@ -200,13 +200,13 @@ int get_bytes_per_chunk(unsigned long length)
 }
 
 // Print IntRGB
-void print_IntRGB(IntRGB rgb)
+void print_IntRGB(const IntRGB rgb)
 {
     printf("%d, %d, %d\n", rgb.r, rgb.g, rgb.b);
 }
 
 // Prints the header information from a dat file
-void print_dat_header(DatHeader file_header)
+void print_dat_header(const DatHeader file_header)
 {
     printf("---HEADER---\n");
     printf("magic: %#010x\n", file_header.magic);
@@ -224,7 +224,7 @@ void print_dat_header(DatHeader file_header)
 }
 
 // Calculate the checksum of the .dat file's header. Assumes header is 128 bytes long
-unsigned char calculate_dat_header_sum(unsigned char* buf)
+unsigned char calculate_dat_header_sum(const unsigned char* buf)
 {   
     unsigned char header_sum = 0;
     for (int i = 0; i < 127; i++) // 127 not 128 to avoid counting the checksum value itself
@@ -236,7 +236,7 @@ unsigned char calculate_dat_header_sum(unsigned char* buf)
 }
 
 // Calculate the checksum of the .dat file's body.
-unsigned int calculate_dat_body_sum(unsigned char* data_buf, uint16_t data_size)
+unsigned int calculate_dat_body_sum(const unsigned char* data_buf, const uint16_t data_size)
 {
     unsigned int data_sum = 0;
 	for (int i = 0; i < data_size; i++)
@@ -248,7 +248,7 @@ unsigned int calculate_dat_body_sum(unsigned char* data_buf, uint16_t data_size)
 }
 
 // Creates and saves a cube file from the header information and file data from the dat file
-int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, char* output_name)
+int save_cube_file(const DatHeader header, const IntRGB* data, const int bit_depth, const int lut_size, const char* output_name)
 {
     FILE* cube;
     cube = fopen(output_name, "w");
@@ -276,7 +276,7 @@ int save_cube_file(DatHeader header, IntRGB* data, int bit_depth, int lut_size, 
   Uses multiple memcpy's rather than a single fread into a struct because Linux
   and Windows have different lengths for certain types
 */
-void read_dat_header(char* buf, DatHeader* header)
+void read_dat_header(const char* buf, DatHeader* header)
 {
     memcpy(&header->magic, &buf[0], 4);
     memcpy(&header->ver, &buf[4], 4);
@@ -293,7 +293,7 @@ void read_dat_header(char* buf, DatHeader* header)
 }
 
 // Inspect and print dat file
-int inspect_dat_file(char* input)
+int inspect_dat_file(const char* input)
 {
     FILE* fp = fopen(input, "rb");
     if (fp == NULL)
@@ -457,7 +457,7 @@ int read_cube_header(FILE* fp, CubeHeader* header)
 }
 
 // Print CubeHeader struct
-void printf_cube_header(CubeHeader header)
+void printf_cube_header(const CubeHeader header)
 {
     printf("---CUBE HEADER---\n");
     printf("Title: %s\n", header.title);
@@ -527,7 +527,7 @@ int cube_to_dat(FILE* fp, char* output)
   Do NOT add the period in the extension (eg. "dat" not .dat)
   Returns 1 if the extension matches, 0 otherwise
 */
-int check_file_extension(char* file_path, char* extension)
+int check_file_extension(const char* file_path, const char* extension)
 {
     const char* dot = strrchr(file_path, '.');
     if(!dot || dot == file_path)
