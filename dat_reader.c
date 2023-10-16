@@ -333,7 +333,7 @@ int dat_to_cube(FILE* fp, char* output)
     DatHeader file_header;
     read_dat_header(head_buf, &file_header);
 
-    print_dat_header(file_header);
+    //print_dat_header(file_header);
 
     // calculate header checksum and compare
     unsigned char header_sum = calculate_dat_header_sum(head_buf);
@@ -518,6 +518,28 @@ int cube_to_dat(FILE* fp, char* output)
     return 0;
 }
 
+/*
+  Check if a file path has the correct extension.
+  Do NOT add the period in the extension (eg. "dat" not .dat)
+  Returns 1 if the extension matches, 0 otherwise
+*/
+int check_file_extension(char* file_path, char* extension)
+{
+    const char* dot = strrchr(file_path, '.');
+    if(!dot || dot == file_path)
+    {
+        printf("ERROR: File (%s) requires an extension (.%s)\n", file_path, extension);
+        return 0;
+    }
+
+    if (strcmp(dot+1, extension) != 0){
+        printf("ERROR: Incorrect file extension in path %s. Should be .%s\n", file_path, extension);
+        return 0;
+    }
+
+    return 1;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -538,10 +560,17 @@ int main(int argc, char *argv[])
         }
         if (argc == 4)
         {
-            dat_to_cube(fp, argv[3]);
+            if (check_file_extension(argv[2], "dat")
+                && check_file_extension(argv[3], "cube"))
+            {
+                dat_to_cube(fp, argv[3]);
+            }
         } else
         {
-            dat_to_cube(fp, "output.cube");
+            if(check_file_extension(argv[2], "dat"))
+            {
+                dat_to_cube(fp, "output.cube");
+            }
         }
         fclose(fp);
     } else if(strcmp(argv[1], "-ctd") == 0 && (argc == 3 || argc == 4))
@@ -556,15 +585,25 @@ int main(int argc, char *argv[])
         }
         if (argc == 4)
         {
-            cube_to_dat(fp, argv[3]);
+            if (check_file_extension(argv[2], "cube")
+                && check_file_extension(argv[3], "dat"))
+            {
+                cube_to_dat(fp, argv[3]);
+            }
         } else
         {
-            cube_to_dat(fp, "output.dat");
+            if(check_file_extension(argv[2], "cube"))
+            {
+                cube_to_dat(fp, "output.dat");
+            }
         }
         fclose(fp);
     } else if(strcmp(argv[1], "-inspect") == 0 && argc == 3)
     {
-        inspect_dat_file(argv[2]);
+        if (check_file_extension(argv[2], "dat"))
+        {
+            inspect_dat_file(argv[2]);
+        }
     } else
     {
         print_usage();
