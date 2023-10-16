@@ -470,8 +470,6 @@ void printf_cube_header(const CubeHeader header)
 */
 int cube_to_dat(FILE* fp, char* output)
 {
-    printf("converting cube to .dat: %s\n", output);
-
     CubeHeader cube_header;
 
     read_cube_header(fp, &cube_header);
