@@ -613,20 +613,3 @@ int main(int argc, char *argv[])
     
     return 0;
 }
-
-// https://www.dremendo.com/c-programming-tutorial/c-binary-file-handling
-// https://cryptii.com/pipes/integer-encoder
-// https://flandersscientific.com/lut/
-
-
-/*
->>> i= int('0000C000', 16)
->>> format(i, '0>32b')
-
-https://stackoverflow.com/questions/12240299/convert-bytes-to-int-uint-in-c
-
-https://stackoverflow.com/questions/10493411/what-is-bit-masking
-
-https://www.tutorialspoint.com/c_standard_library/c_function_fseek.htm
-
-*/
